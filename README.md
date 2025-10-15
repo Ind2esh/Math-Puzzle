@@ -1,8 +1,4 @@
 # Math-Puzzle
-Of course! Here is a README.md file for the math puzzle program.
-
------
-# **Math Puzzle** 
 
 **Math Puzzle** is a responsive, feature-rich, and self-contained web-based math game designed to challenge and entertain users of all skill levels. Built with vanilla HTML, CSS, and JavaScript, it offers a complete gaming experience with user authentication, multiple game modes, difficulty levels, and score tracking, all within a single file.
 
