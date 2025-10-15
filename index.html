@@ -1,0 +1,2133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Puzzle</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* --- 1. CSS VARIABLES (Theme Management) --- */
+        :root {
+            /* Light Theme (Default) */
+            --bg-body: #f3f4f6;
+            --bg-container: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --btn-start-color: #a3e635;
+            --btn-end-color: #84cc16;
+            --btn-text: #1f2937;
+            --hover-bg: #65a30d;
+            --puzzle-bg: #f3f4f6;
+            --accent-color: #3b82f6;
+            --secondary-accent: #f59e0b;
+            --border-color: #d1d5db;
+            --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15), 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark-mode {
+            /* Dark Theme */
+            --bg-body: #111827;
+            --bg-container: #2d3748;
+            --text-primary: #f3f4f6;
+            --text-secondary: #d1d5db;
+            --btn-start-color: #4a5568;
+            --btn-end-color: #2d3748;
+            --btn-text: #f3f4f6;
+            --hover-bg: #1a202c;
+            --puzzle-bg: #1f2937;
+            --accent-color: #63b3ed;
+            --secondary-accent: #f6ad55;
+            --border-color: #4b5563;
+            --shadow-lg: 0 10px 20px rgba(255, 255, 255, 0.05), 0 4px 6px rgba(255, 255, 255, 0.05);
+        }
+
+        /* --- 2. BASE STYLES & ANIMATIONS (Modified popIn for register fields and added growShrink for question box) --- */
+
+        @keyframes animated-body-bg-light {
+            0% { background: linear-gradient(135deg, #e0f7fa, #b2ebf2); }
+            25% { background: linear-gradient(135deg, #ffcdd2, #f8bbd0); }
+            50% { background: linear-gradient(135deg, #c8e6c9, #a5d6a7); }
+            75% { background: linear-gradient(135deg, #d1c4e9, #b39ddb); }
+            100% { background: linear-gradient(135deg, #e0f7fa, #b2ebf2); }
+        }
+
+        @keyframes animated-body-bg-dark {
+            0% { background: linear-gradient(135deg, #1a202c, #2d3748); }
+            25% { background: linear-gradient(135deg, #4a148c, #880e4f); }
+            50% { background: linear-gradient(135deg, #0d47a1, #004d40); }
+            75% { background: linear-gradient(135deg, #3e2723, #212121); }
+            100% { background: linear-gradient(135deg, #1a202c, #2d3748); }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            /* MODIFIED: Change alignment from 'center' to 'flex-start' 
+              This makes the whole app hug the left edge.
+            */
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem;
+            transition: color 0.5s;
+            position: relative;
+            /* Default animation for light mode */
+            animation: animated-body-bg-light 15s ease-in-out infinite;
+            gap: 1.5rem; /* ADDED: Gap between header and app-wrapper */
+        }
+
+        body.dark-mode {
+            animation-name: animated-body-bg-dark;
+        }
+
+        /* --- Updated Responsive Board Size Logic (Applied to both header and app) --- */
+        .max-width-sizer { 
+            width: 100%;
+            max-width: 30rem; /* Default max-width for mobile */
+            /* MODIFIED: Removed 'margin: 0 auto;' to make it left-aligned for mobile */
+            margin: 0;
+        }
+
+        /* Adjustment for tablets/small laptops (making it a good medium size) */
+        @media (min-width: 640px) {
+            .max-width-sizer {
+                max-width: 40rem;
+                /* MODIFIED: Left-align on tablets too */
+                margin: 0;
+            }
+        }
+
+        /* Adjustment for larger desktops/PC view (decreasing size on bigger screens) */
+        @media (min-width: 1024px) {
+            .max-width-sizer {
+                max-width: 35rem; 
+                /* NEW: Shift container away from the left edge */
+                margin: 0;
+                margin-left: 25%; 
+            }
+        }
+        /* --- End Updated Responsive Board Size Logic --- */
+
+        #game-container {
+            /* This is the element containing all the screens, controlled by app-wrapper */
+            background-color: var(--bg-container);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-lg);
+            /* text-align: center; <-- REMOVED to allow left alignment for start/level screens */
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            transition: background-color 0.5s, box-shadow 0.5s;
+        }
+
+        /* --- NEW: Text Alignment Per Screen (High Scores is now centered) --- */
+        /* Center text for screens that are purely informational/login focused */
+        #auth-login-screen, #end-screen, #high-scores-screen {
+            text-align: center;
+        }
+        /* Left align text for screens with lists/forms/toggles/back buttons */
+        #start-screen, #level-select-screen, #info-screen, #profile-screen {
+             text-align: left;
+        }
+        /* Override: Center titles on relevant screens */
+        #start-screen h3, #level-select-screen h3, #auth-login-screen h3, #high-scores-screen h3, #info-screen h3, #profile-screen h3 {
+            text-align: center;
+        }
+        /* --- End NEW Alignment --- */
+
+        #app-wrapper {
+            /* Sizing is now handled by .max-width-sizer */
+        }
+
+
+        /* --- 3. HEADER COMPONENT (Updated to use .max-width-sizer) --- */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            /* Alignment (including left/right margins) is controlled by .max-width-sizer and body flex */
+            /* REMOVED: margin-bottom: 1.5rem; (Spacing is now handled by the 'gap' property on the body) */
+            background-color: var(--bg-container);
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: background-color 0.5s, box-shadow 0.5s;
+        }
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(90deg, #f59e0b, #ef4444, #8b5cf6, #3b82f6, #22c55e, #f59e0b);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: animated-gradient-text 5s ease-in-out infinite;
+        }
+        .app-icon {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+        @keyframes animated-gradient-text {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* User Status Dropdown */
+        .auth-status-dropdown, .info-menu-dropdown { position: relative; display: flex; align-items: center; }
+
+        #theme-toggle-btn, #info-menu-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-right: 1rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+        #info-menu-btn { margin-right: 0; margin-left: 0.5rem; }
+
+        #theme-toggle-btn:hover, #info-menu-btn:hover {
+            background-color: var(--puzzle-bg);
+        }
+        #theme-toggle-btn img, #info-menu-btn img {
+            width: 25px;
+            height: 25px;
+        }
+        body.dark-mode #info-menu-icon {
+            filter: invert(1);
+        }
+
+
+        #auth-display-btn {
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            background-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            line-height: 1.2;
+        }
+        #user-display {
+            margin-right: 0;
+        }
+        #current-time-display {
+            font-size: 0.7rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+        #logout-menu, #info-menu {
+            position: absolute;
+            right: 0;
+            margin-top: 0.5rem;
+            width: 15rem; /* Increased width to accommodate longer labels */
+            background-color: var(--bg-container);
+            border-radius: 0.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            z-index: 30;
+            transition: transform 0.2s;
+            transform-origin: top right;
+            padding: 0.5rem;
+        }
+        /* NEW: Close button for the dropdown menu */
+        #close-logout-menu-btn, #close-info-menu-btn {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.5rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            line-height: 1;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 0.25rem;
+            transition: color 0.3s, transform 0.3s;
+        }
+        #close-logout-menu-btn:hover, #close-info-menu-btn:hover {
+            color: var(--text-primary);
+            transform: scale(1.1);
+        }
+
+        .dropdown-menu-item {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem; /* Increased padding */
+            color: var(--text-secondary);
+            transition: background-color 0.3s, color 0.3s;
+            border-radius: 0.25rem;
+            border: none;
+            background: none;
+            display: flex;
+            align-items: center;
+            font-weight: 500; /* Slightly bolder text */
+        }
+        .dropdown-menu-item:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        #logout-btn:hover {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
+
+
+        /* --- 4. GAME CONTAINER & BASE LAYOUT --- */
+        #start-screen:not(.hidden), #level-select-screen:not(.hidden), #game-screen:not(.hidden), #end-screen:not(.hidden), #auth-login-screen:not(.hidden) {
+            animation: popIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+        }
+
+        /* Apply a distinct animation to the registration fields when they appear */
+        #register-fields:not(.hidden) {
+             animation: slideDownIn 0.5s ease-out;
+        }
+
+        /* --- 5. BUTTON BASE (Decreased Zoom Size) --- */
+        .btn {
+            padding: 1rem 1.5rem;
+            margin: 0.75rem 0;
+            border-radius: 1rem;
+            font-weight: bold;
+            transition: transform 0.3s, background-color 0.3s, color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            border: none;
+        }
+        .btn:hover {
+            transform: translateY(-2px) scale(1.02); /* DECREASED FROM -5px / 1.05 */
+            box-shadow: 0 5px 8px rgba(0, 0, 0, 0.15), 0 0 10px var(--accent-color); /* Adjusted shadow */
+        }
+        .btn:active {
+            transform: translateY(-1px) scale(1.01); /* DECREASED FROM -2px / 1.02 */
+            box-shadow: 0 0 10px var(--accent-color), 0 0 15px var(--secondary-accent); /* Adjusted shadow */
+        }
+
+        /* Custom Button Colors */
+        .btn-blue { background: linear-gradient(145deg, #3b82f6, #2563eb); color: white; }
+        .btn-green { background: linear-gradient(145deg, #10b981, #059669); color: white; }
+        .btn-red { background: linear-gradient(145deg, #ef4444, #dc2626); color: white; }
+        .btn-yellow { background: linear-gradient(145deg, #f59e0b, #d97706); color: var(--text-primary); }
+
+
+        /* --- 6. AUTH & PROFILE SCREEN SPECIFIC STYLES --- */
+        #auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .input-row label {
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 80px; /* Label width */
+            flex-shrink: 0;
+        }
+        .input-row .input-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+        .input-row input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: var(--puzzle-bg);
+            color: var(--text-primary);
+            transition: border-color 0.3s;
+        }
+        #auth-form input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* New Styles for Registration Fields */
+        .name-group { display: flex; gap: 0.5rem; flex-grow: 1; }
+        .name-group input { flex: 1; }
+
+        /* Password Toggle Styles (Adjusted for .input-wrapper) */
+        .password-input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-input-group input {
+            padding-right: 3rem; /* Make room for the toggle icon */
+        }
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            z-index: 10;
+        }
+
+        /* High Scores List */
+        #high-scores-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 1.5rem;
+            /* Added for centering the whole list */
+            display: inline-block;
+            text-align: left;
+            width: 100%;
+            max-width: 25rem;
+        }
+        .high-score-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background-color: var(--puzzle-bg);
+            border-left: 5px solid var(--accent-color);
+            font-size: 1rem;
+            transition: transform 0.2s;
+        }
+        .high-score-item:nth-child(1) { border-left-color: #f59e0b; font-weight: 700; }
+        .high-score-item:nth-child(2) { border-left-color: #d1d5db; }
+        .high-score-item:nth-child(3) { border-left-color: #b91c1c; }
+        .score-details span { display: block; text-align: right; font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* NEW: Profile Screen Styles */
+        .profile-detail-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .profile-detail-item:last-child {
+            border-bottom: none;
+        }
+        .profile-detail-item span:first-child {
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: inline-block;
+            width: 100px;
+        }
+        .profile-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background-color: var(--puzzle-bg);
+            border-radius: 0.5rem;
+        }
+
+        /* Other Auth Styles */
+        .auth-toggle-btn-group { 
+            display: flex; 
+            justify-content: center; 
+            margin-bottom: 1.5rem; 
+            position: relative; /* For the separator */
+        }
+        /* NEW Separator Style */
+        .auth-toggle-separator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--border-color);
+            font-size: 1.5rem;
+            font-weight: 300;
+            padding: 0 0.5rem;
+            pointer-events: none;
+            z-index: 2;
+            background-color: var(--bg-container); 
+        }
+
+        .auth-toggle-btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 700;
+            transition: background-color 0.3s, color 0.3s;
+            border: 1px solid var(--border-color);
+            background-color: var(--puzzle-bg);
+            color: var(--text-secondary);
+            cursor: pointer;
+            flex: 1;
+            z-index: 1; /* Ensure buttons are clickable over separator */
+        }
+        .auth-toggle-btn:first-child { border-radius: 0.75rem 0 0 0.75rem; border-right: 1px solid var(--border-color); }
+        .auth-toggle-btn:last-child { border-radius: 0 0.75rem 0.75rem 0; border-left: 1px solid var(--border-color); }
+        
+        /* Adjusting active styles to visually enclose the separator */
+        .auth-toggle-btn.active-blue {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .auth-toggle-btn.active-green {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+
+        .or-separator {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        .or-separator hr {
+            width: 100%;
+            border-color: var(--border-color);
+        }
+        .or-separator span {
+            position: absolute;
+            background-color: var(--bg-container);
+            padding: 0 0.75rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+        .auth-message { margin-top: 1rem; font-weight: 600; }
+
+        /* --- 7. GAME SCREEN STYLES (Added growShrink animation to question box) --- */
+        .game-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+        }
+        .game-type-btn {
+            color: white;
+            margin: 0;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            padding: 1rem 1.25rem;
+            height: 100%;
+        }
+        .puzzle-icon-img {
+            width: 25px;
+            height: 25px;
+            margin-right: 8px;
+            transition: transform 0.3s;
+        }
+
+        /* NEW: Styles for the training mode switch button */
+        #training-mode-switch-container {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .level-select-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+            margin-top: 1.25rem;
+        }
+        .level-btn {
+            color: var(--btn-text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            padding: 1rem 1rem;
+            height: 100%;
+        }
+        .level-btn[data-level="easy"] .puzzle-icon-img { width: 30px; }
+        .level-btn[data-level="medium"] .puzzle-icon-img { width: 40px; }
+        .level-btn[data-level="hard"] .puzzle-icon-img { width: 70px; height: 25px;}
+        .level-btn[data-level="extreme"] .puzzle-icon-img { width: 80px; height: 25px;}
+        .level-btn .puzzle-icon-img { margin-right: 0; margin-bottom: 6px; }
+
+        #info-bar {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+        #info-bar p { margin: 0; text-align: center; }
+        #info-bar .right { text-align: right; }
+        #question-box {
+            background-color: var(--puzzle-bg);
+            border-radius: 1.5rem;
+            padding: 2.5rem;
+            min-height: 8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            transition: background-color 0.3s;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+            /* Existing animation on screen change */
+            animation: fadeIn 1s ease-out;
+        }
+
+        /* New animation class for question transition */
+        #question-box.animate-new {
+             animation: growShrink 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55) both;
+        }
+
+        .dark-mode #question-box { color: var(--text-primary); }
+        #options-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        .answer-btn {
+            background: linear-gradient(145deg, #f0f0f0, #dcdcdc);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 1rem;
+            font-weight: 700;
+            border-radius: 1rem;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .dark-mode .answer-btn {
+            background: linear-gradient(145deg, #333, #555);
+            color: var(--text-primary);
+        }
+        .answer-btn:hover:not(:disabled) {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(145deg, #e0e0e0, #c0c0c0);
+        }
+        .dark-mode .answer-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #444, #666);
+        }
+        .correct-answer {
+            background: #4ade80 !important;
+            color: white !important;
+            animation: pulse 0.5s ease-in-out;
+            box-shadow: 0 0 15px #4ade80;
+        }
+        .incorrect-answer {
+            background: #f87171 !important;
+            color: white !important;
+            animation: vibrate 0.2s ease-in-out;
+            box-shadow: 0 0 15px #f87171;
+        }
+        /* Styles for info screen content */
+        #info-screen-content {
+            margin-top: 1.5rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        #info-screen-content h4 {
+            color: var(--text-primary);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        #info-screen-content a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        #info-screen-content a:hover {
+            text-decoration: underline;
+        }
+        #info-screen-content p {
+            margin-bottom: 1rem;
+        }
+
+
+        /* --- 8. TOGGLES & UTILITIES --- */
+        #level-toggles-container { /* New container for toggles */
+             padding-top: 1rem;
+        }
+        .full-width-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: 1.25rem;
+        }
+        .full-width-toggle .toggle-label {
+            margin: 0;
+            padding: 1.25rem 1.5rem;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--puzzle-bg);
+            border-radius: 1rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+            cursor: pointer;
+        }
+        .toggle-label span { margin-left: 0.5rem; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+        .toggle-label img { width: 25px; height: 25px; margin-right: 10px; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .toggle-slider { background-color: var(--accent-color); }
+        input:checked + .toggle-slider:before { transform: translateX(22px); }
+
+        .back-btn {
+            display: block;
+            width: fit-content;
+            margin: -1rem 0 1.5rem -1rem;
+            background: none;
+            border: none;
+            /* font-size: 1.75rem; <-- No longer needed for img */
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: transform 0.3s;
+            text-align: left;
+            padding: 0.5rem;
+        }
+        .back-btn:hover { transform: scale(1.1); }
+        
+        /* NEW: Styles for Back Button Image */
+        .back-icon-img {
+            width: 28px;
+            height: 28px;
+        }
+        body.dark-mode .back-icon-img {
+            filter: invert(1) brightness(2);
+        }
+
+        .high-score-display-container { margin-top: 1rem; font-size: 1.25rem; font-weight: 600; color: var(--secondary-accent); }
+        .hidden { display: none !important; }
+
+        /* --- 9. ANIMATIONS (Modified and Added) --- */
+        @keyframes vibrate { 0%, 100% { transform: translateX(0); } 25%, 75% { transform: translateX(-5px); } 50% { transform: translateX(5px); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        @keyframes popIn { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 80% { transform: scale(1.02) translateY(-5px); opacity: 1; } 100% { transform: scale(1) translateY(0); opacity: 1;} }
+        @keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+        /* NEW: Animation for registration fields */
+        @keyframes slideDownIn {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        /* NEW: Animation for question box when a new question loads */
+        @keyframes growShrink {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+
+        /* CONFETTI STYLES */
+        #confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 10;
+        }
+        .confetti-piece {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            animation: fall 2s forwards;
+            border-radius: 50%;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body> <div id="confetti-container"></div>
+
+    <div id="header-container" class="header-container hidden max-width-sizer">
+        <a href="#" id="home-link" style="text-decoration: none;"> <h3 class="header-title">
+                <img src="Pro.png" onerror="this.src='https://placehold.co/40x40/1f2937/f3f4f6?text=M';" alt="Puzzle Icon" class="app-icon">
+                Math Puzzle
+            </h3>
+        </a>
+        <div style="display: flex; align-items: center;">
+
+            <button id="theme-toggle-btn">
+                <img id="theme-icon" src="Dark.png" onerror="this.src='https://placehold.co/25x25/f59e0b/ffffff?text=D';" alt="Theme Icon">
+            </button>
+
+            <div class="auth-status-dropdown">
+                <button id="auth-display-btn">
+                    <span id="user-display">...</span>
+                    <span id="current-time-display"></span>
+                </button>
+                <div id="logout-menu" class="hidden">
+                    <button id="close-logout-menu-btn">&times;</button>
+                    
+                    <button id="profile-btn" class="dropdown-menu-item"> <i class="fas fa-user-circle" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i>
+                        Profile (Name & History)
+                    </button>
+
+                    <button id="high-scores-btn" class="dropdown-menu-item">
+                        <i class="fas fa-trophy" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i>
+                        High Scores
+                    </button>
+                    
+                    <button id="main-puzzle-btn" class="dropdown-menu-item">
+                        <img src="Pro.png" onerror="this.src='https://placehold.co/16x16/8b5cf6/ffffff?text=M';" style="width: 1rem; height: 1rem; margin-right: 0.5rem;">
+                        Main Puzzle
+                    </button>
+
+                    <button id="training-mode-btn" class="dropdown-menu-item"> <img src="Training.png" onerror="this.src='https://placehold.co/16x16/3b82f6/ffffff?text=T';" style="width: 1rem; height: 1rem; margin-right: 0.5rem;">
+                        Training Mode
+                    </button>
+
+                    <button id="logout-btn" class="dropdown-menu-item">
+                        <svg style="width: 1rem; height: 1rem; margin-right: 0.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                        Log Out
+                    </button>
+                </div>
+            </div>
+
+            <div class="info-menu-dropdown">
+                <button id="info-menu-btn">
+                     <img id="info-menu-icon" src="Menu.png" onerror="this.src='https://placehold.co/25x25/1f2937/f3f4f6?text=≡';" alt="Menu Icon">
+                </button>
+                <div id="info-menu" class="hidden">
+                    <button id="close-info-menu-btn">&times;</button>
+                    <button id="home-menu-btn" class="dropdown-menu-item">
+                        <i class="fas fa-home" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i> Home
+                    </button>
+                    <button id="how-to-play-btn" class="dropdown-menu-item">
+                        <i class="fas fa-question-circle" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i> How to Play
+                    </button>
+                    <button id="about-us-btn" class="dropdown-menu-item">
+                        <i class="fas fa-info-circle" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i> About Us
+                    </button>
+                    <button id="contact-btn" class="dropdown-menu-item">
+                         <i class="fas fa-envelope" style="width: 1rem; height: 1rem; margin-right: 0.5rem;"></i> Contact
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <div id="app-wrapper" class="max-width-sizer">
+        <div id="game-container">
+            <div id="auth-login-screen" class="hidden">
+                <h3 class="header-title" style="justify-content: center; font-size: 1.75rem; margin-bottom: 1.5rem;">
+                    Welcome Back!
+                </h3>
+
+                <div class="auth-toggle-btn-group">
+                    <button data-type="login" id="login-toggle" class="auth-toggle-btn active-blue">Login</button>
+                    <div class="auth-toggle-separator">|</div> <button data-type="register" id="register-toggle" class="auth-toggle-btn">Register</button>
+                </div>
+
+                <form id="auth-form">
+
+                    <div id="register-fields" class="hidden">
+
+                        <div class="input-row">
+                            <label>Name:</label>
+                            <div class="name-group">
+                                <input type="text" name="firstName" placeholder="First" />
+                                <input type="text" name="lastName" placeholder="Last" />
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <label for="regEmail">Email:</label>
+                            <div class="input-wrapper">
+                                <input type="email" name="regEmail" id="regEmail" placeholder="user@example.com" required />
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <label for="dob">Date of Birth:</label>
+                            <div class="input-wrapper">
+                                <input type="date" name="dob" id="dob" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="username">Username:</label>
+                        <div class="input-wrapper">
+                            <input type="text" name="username" id="username" placeholder="Your Unique Username" required />
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <label for="password">Password:</label>
+                        <div class="input-wrapper password-input-group">
+                            <input type="password" name="password" id="password" data-id="password" placeholder="Min 8, A-z, 0-9, !@#" required />
+                            <span class="password-toggle"><i class="fas fa-eye"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="input-row hidden" id="confirm-password-row">
+                        <label for="confirmPassword">Confirm:</label>
+                        <div class="input-wrapper password-input-group">
+                            <input type="password" name="confirmPassword" id="confirmPassword" data-id="confirmPassword" placeholder="Confirm Password" required />
+                            <span class="password-toggle"><i class="fas fa-eye"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="terms-group hidden" id="terms-group">
+                        <input type="checkbox" id="terms-checkbox" required />
+                        <label for="terms-checkbox">I agree to the <a href="#" id="view-terms" style="color: var(--accent-color); text-decoration: underline;">Terms and Conditions</a></label>
+                    </div>
+
+                    <button type="submit" id="auth-submit-btn" class="btn btn-blue" style="width: 100%; padding: 0.75rem 1rem; margin-top: 0;">
+                        Login
+                    </button>
+                </form>
+
+                <div class="or-separator">
+                    <hr />
+                    <span>OR</span>
+                </div>
+
+                <button id="guest-login-btn" class="btn btn-yellow" style="width: 100%; padding: 0.75rem 1rem;">
+                    Continue as Guest
+                </button>
+
+                <p id="auth-message" class="auth-message text-sm" style="color: #ef4444;"></p>
+            </div>
+
+
+            <div id="start-screen" class="hidden">
+                <h3 class="text-xl font-semibold" style="margin-bottom: 1.5rem;">Choose a Game Type</h3>
+                <div class="game-type-grid">
+                    <button class="game-type-btn btn" data-type="addition"><img src="add.png" onerror="this.src='https://placehold.co/25x25/10b981/ffffff?text=+'" alt="Addition Icon" class="puzzle-icon-img"><span>Addition Puzzle</span></button>
+                    <button class="game-type-btn btn" data-type="subtraction"><img src="sub.png" onerror="this.src='https://placehold.co/25x25/ef4444/ffffff?text=-'" alt="Subtraction Icon" class="puzzle-icon-img"><span>Subtraction Puzzle</span></button>
+                    <button class="game-type-btn btn" data-type="multiplication"><img src="mul.png" onerror="this.src='https://placehold.co/25x25/f59e0b/ffffff?text=x'" alt="Multiplication Icon" class="puzzle-icon-img"><span>Multiplication Puzzle</span></button>
+                    <button class="game-type-btn btn" data-type="division"><img src="div.png" onerror="this.src='https://placehold.co/25x25/3b82f6/ffffff?text=/'" alt="Division Puzzle" class="puzzle-icon-img"><span>Division Puzzle</span></button>
+                    <button class="game-type-btn btn" data-type="mixed" style="grid-column: span 2 / span 2;"><img src="mix.png" onerror="this.src='https://placehold.co/25x25/8b5cf6/ffffff?text=?&font=inter&font-size=20'" alt="Mixed Icon" class="puzzle-icon-img"><span>Mixed Puzzle</span></button>
+                </div>
+                <div id="training-mode-switch-container" class="hidden">
+                    <button id="switch-to-main-puzzle-btn" class="btn btn-yellow" style="width:100%">Switch to Main Puzzle</button>
+                </div>
+            </div>
+
+            <div id="level-select-screen" class="hidden">
+                <button id="back-to-start" class="back-btn">
+                    <img src="Back.png" alt="Back Icon" class="back-icon-img" onerror="this.src='https://placehold.co/28x28/1f2937/f3f4f6?text=←';">
+                </button>
+                <h3 class="text-xl font-semibold" style="margin-bottom: 0.5rem;">Choose Difficulty</h3>
+                <div class="level-select-grid">
+                    <button class="level-btn btn" data-level="easy"><img src="Easy.png" onerror="this.src='https://placehold.co/30x30/10b981/ffffff?text=⭐'" alt="One Star Icon" class="puzzle-icon-img"><span>Easy</span></button>
+                    <button class="level-btn btn" data-level="medium"><img src="Medium.png" onerror="this.src='https://placehold.co/40x40/f59e0b/ffffff?text=⭐⭐'" alt="Two Stars Icon" class="puzzle-icon-img"><span>Medium</span></button>
+                    <button class="level-btn btn" data-level="hard"><img src="Hard.png" onerror="this.src='https://placehold.co/70x25/ef4444/ffffff?text=⭐⭐⭐'" alt="Three Stars Icon" class="puzzle-icon-img"><span>Hard</span></button>
+                    <button class="level-btn btn" data-level="extreme"><img src="Extreme.png" onerror="this.src='https://placehold.co/80x25/4b5563/ffffff?text=⭐⭐⭐⭐'" alt="Four Stars Icon" class="puzzle-icon-img"><span>Extreme</span></button>
+                </div>
+
+                <div id="level-toggles-container"> <div class="full-width-toggle">
+                        <label for="timer-toggle-checkbox" class="toggle-label">
+                            <img src="Timer.png" onerror="this.src='https://placehold.co/25x25/f59e0b/ffffff?text=⏱';" alt="Timer Icon">
+                            <span>Timer</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="timer-toggle-checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                    <div class="full-width-toggle">
+                        <label for="lives-toggle-checkbox" class="toggle-label">
+                            <img src="Lives.png" onerror="this.src='https://placehold.co/25x25/ef4444/ffffff?text=♥';" alt="Lives Icon">
+                            <span>Lives</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="lives-toggle-checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="game-screen" class="hidden">
+                <div id="info-bar">
+                    <p class="left">Score: <span id="score" style="color: #10b981;">0</span></p>
+                    <p id="level-display" style="font-weight: 700; color: var(--accent-color);"></p>
+                    <div class="right" style="font-size: 0.875rem;">
+                        <p id="lives-display-container" style="display:inline-block; margin-right: 0.5rem;">Lives: <span id="lives" style="color: #ef4444;" class="font-bold">5</span></p>
+                        <p id="time-display-container" style="display:inline-block;">Time: <span id="time" style="color: var(--accent-color);" class="font-bold">N/A</span></p>
+                    </div>
+                </div>
+                <div id="question-box">
+                    <p id="math-puzzle" style="font-size: 3rem;"></p>
+                </div>
+                <div id="options-container">
+                    <button class="answer-btn"></button>
+                    <button class="answer-btn"></button>
+                    <button class="answer-btn"></button>
+                    <button class="answer-btn"></button>
+                </div>
+                <button id="exit-btn" class="btn btn-red" style="width: 100%; margin-top: 1rem;">Exit Game</button>
+            </div>
+
+            <div id="high-score-display-container" class="high-score-display-container hidden">
+                <p>High Score (<span id="high-score-mode">...</span> - <span id="high-score-level">...</span>): <span id="high-score-display" class="font-bold">0</span></p>
+            </div>
+
+
+            <div id="end-screen" class="hidden">
+                <h3 class="text-3xl font-bold" style="margin-bottom: 1rem; color: #ef4444;">Game Over</h3>
+                <p class="text-xl" id="end-final-score" style="margin-bottom: 0.5rem; color: var(--text-secondary);"></p>
+                <p class="text-xl" id="end-high-score" style="margin-bottom: 1.5rem; color: var(--text-secondary);"></p>
+                <p id="new-record-msg" class="hidden text-2xl" style="color: #10b981; animation: pulse 1.5s infinite;">🎉 NEW RECORD!</p>
+                <button id="restart-btn" class="btn btn-blue" style="width: 100%; margin-top: 1.5rem;">Restart</button>
+                <button id="back-to-home-btn" class="btn btn-green" style="width: 100%; margin-top: 0.5rem;">Back to Home</button>
+            </div>
+
+            <div id="high-scores-screen" class="hidden">
+                <button id="back-from-high-scores" class="back-btn">
+                    <img src="Back.png" alt="Back Icon" class="back-icon-img" onerror="this.src='https://placehold.co/28x28/1f2937/f3f4f6?text=←';">
+                </button>
+                <h3 class="text-xl font-semibold" style="margin-bottom: 0.5rem;">Your Top Scores</h3>
+                <ul id="high-scores-list">
+                    </ul>
+                <p id="no-scores-msg" class="text-center text-sm" style="color: var(--text-secondary); margin-top: 2rem;">No scores recorded yet!</p>
+            </div>
+            
+            <div id="profile-screen" class="hidden"> 
+                <button id="back-from-profile" class="back-btn">
+                    <img src="Back.png" alt="Back Icon" class="back-icon-img" onerror="this.src='https://placehold.co/28x28/1f2937/f3f4f6?text=←';">
+                </button>
+                <h3 class="text-xl font-semibold" style="margin-bottom: 1.5rem;">User Profile</h3>
+                <div id="profile-details-container" style="text-align: left; margin-bottom: 2rem;">
+                    </div>
+                <h4 style="text-align: center; font-weight: 700; margin-bottom: 1rem;">Recent Play History</h4>
+                <ul id="profile-history-list" style="list-style: none; padding: 0;">
+                    </ul>
+                <p id="no-history-msg" class="hidden text-center text-sm" style="color: var(--text-secondary); margin-top: 2rem;">No games played yet!</p>
+            </div>
+            
+            <div id="info-screen" class="hidden">
+                <button id="back-from-info" class="back-btn">
+                    <img src="Back.png" alt="Back Icon" class="back-icon-img" onerror="this.src='https://placehold.co/28x28/1f2937/f3f4f6?text=←';">
+                </button>
+                <h3 id="info-screen-title" class="text-xl font-semibold" style="margin-bottom: 0.5rem;"></h3>
+                <div id="info-screen-content"></div>
+            </div>
+
+       </div>
+   </div>
+
+    <script>
+        // --- AUTHENTICATION & STORAGE (MOCK BACKEND) ---
+        let MOCK_DB_USERS = JSON.parse(localStorage.getItem('MOCK_DB_USERS')) || {};
+        let auth = null;
+        let currentAuthScreen = 'login';
+
+        const saveMockUsers = () => localStorage.setItem('MOCK_DB_USERS', JSON.stringify(MOCK_DB_USERS));
+
+        // --- PASSWORD VALIDATION (Unchanged) ---
+        const validatePassword = (password) => {
+            const minLength = 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasDigit = /[0-9]/.test(password);
+            const hasSpecialChar = /[!@#$%^&*?~_]/.test(password);
+
+            if (password.length < minLength) return 'Password must be at least 8 characters long.';
+            if (!hasUpperCase) return 'Password must contain at least one uppercase letter (A-Z).';
+            if (!hasLowerCase) return 'Password must contain at least one lowercase letter (a-z).';
+            if (!hasDigit) return 'Password must contain at least one number (0-9).';
+            if (!hasSpecialChar) return 'Password must contain at least one special character (!@#$%^&*?~_).';
+
+            return true;
+        };
+
+        const loadAuth = () => {
+            const storedAuth = localStorage.getItem('auth');
+            if (storedAuth) {
+                auth = JSON.parse(storedAuth);
+                updateAuthDisplay();
+                if (auth) {
+                    showScreen('start-screen');
+                } else {
+                    showScreen('auth-login-screen');
+                }
+            } else {
+                showScreen('auth-login-screen');
+            }
+        };
+
+        const loginUser = (username, password) => {
+            const user = Object.values(MOCK_DB_USERS).find(u => u.username.toLowerCase() === username.toLowerCase());
+
+            if (!user) return { success: false, message: 'Invalid username or password.' };
+
+            // Check if the input password satisfies the validation rules before comparison (a quick security check for mock data)
+            const passwordValidation = validatePassword(password);
+            if (passwordValidation !== true) {
+                return { success: false, message: 'Invalid username or password.' };
+            }
+
+            if (user.password === password) {
+                auth = { id: user.id, username: user.username, isGuest: false };
+                localStorage.setItem('auth', JSON.stringify(auth));
+                updateAuthDisplay();
+                return { success: true, message: 'Login successful!' };
+            }
+            return { success: false, message: 'Invalid username or password.' };
+        };
+
+        const registerUser = (details) => {
+            const { firstName, lastName, username, dob, email, password, confirmPassword, terms } = details;
+
+            if (Object.values(MOCK_DB_USERS).some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                return { success: false, message: 'Username is already taken.' };
+            }
+            if (Object.values(MOCK_DB_USERS).some(u => u.email.toLowerCase() === email.toLowerCase())) {
+                return { success: false, message: 'Account with this email already exists.' };
+            }
+            if (username.length < 3) return { success: false, message: 'Username must be at least 3 characters long.' };
+            if (password !== confirmPassword) return { success: false, message: 'Password and Confirm Password must match.' };
+            if (!terms) return { success: false, message: 'You must agree to the Terms and Conditions.' };
+
+            const passwordValidation = validatePassword(password);
+            if (passwordValidation !== true) return { success: false, message: passwordValidation };
+
+            const newId = Date.now();
+            const newUser = { id: newId, firstName, lastName, username, dob, email, password, highScores: [], gameHistory: [] };
+            MOCK_DB_USERS[newId] = newUser; // This saves all user details to local storage.
+            saveMockUsers();
+
+            auth = { id: newId, username, isGuest: false };
+            localStorage.setItem('auth', JSON.stringify(auth));
+            updateAuthDisplay();
+            return { success: true, message: 'Registration successful! You are now logged in.' };
+        };
+
+        const loginAsGuest = () => {
+            const guestId = `Guest-${Math.floor(Math.random() * 9000) + 1000}`;
+            auth = { id: guestId, username: guestId, isGuest: true };
+            localStorage.setItem('auth', JSON.stringify(auth));
+            updateAuthDisplay();
+            showScreen('start-screen');
+        };
+
+        // Function to hide the user details popup
+        const hideLogoutMenu = () => {
+            document.getElementById('logout-menu').classList.add('hidden');
+        };
+        // NEW function to hide the info menu
+        const hideInfoMenu = () => {
+             document.getElementById('info-menu').classList.add('hidden');
+        };
+
+
+        const logout = () => {
+            hideLogoutMenu(); // Hide menu immediately
+            auth = null;
+            localStorage.removeItem('auth');
+            updateAuthDisplay();
+            showScreen('auth-login-screen');
+        };
+
+        const updateAuthDisplay = () => {
+            const userDisplay = document.getElementById('user-display');
+            const headerContainer = document.getElementById('header-container');
+            const authDisplayBtn = document.getElementById('auth-display-btn');
+
+            if (auth) {
+                userDisplay.textContent = auth.username;
+                headerContainer.classList.remove('hidden');
+            } else {
+                headerContainer.classList.add('hidden');
+            }
+        };
+
+
+        // --- GAME STATE AND CONFIGURATION (Updated with isCurrentlyTraining) ---
+        let gameConfig = {
+            gameType: 'addition',
+            level: 'easy',
+            isTimerOn: true,
+            isLivesOn: true,
+        };
+        // Added lastGameConfig to remember settings for "Restart current game"
+        let lastGameConfig = { ...gameConfig };
+        let isCurrentlyTraining = false; // NEW GLOBAL FLAG for training mode
+
+        let gameState = {
+            score: 0, lives: 5, highScore: 0, question: null, options: [], correctAnswer: null,
+            questionTime: 20, timeLeft: 20,
+            askedQuestions: new Set(), // NEW: To track questions in a session
+        };
+        let timerId = null;
+        const operators = ['+', '-', '*', '/'];
+
+        // --- HIGH SCORE & HISTORY LOGIC ---
+        const getGuestHighScoreKey = () => `guest_scores_${auth.id}`;
+        const getGuestHistoryKey = () => `guest_history_${auth.id}`;
+
+
+        const fetchHighScore = () => {
+            if (!auth || isCurrentlyTraining) { // Skip if training
+                gameState.highScore = 0;
+                document.getElementById('high-score-display').textContent = '0';
+                return;
+            }
+
+            let allScores = [];
+            if (auth.isGuest) {
+                const guestScores = localStorage.getItem(getGuestHighScoreKey());
+                allScores = guestScores ? JSON.parse(guestScores) : [];
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                allScores = user ? user.highScores : [];
+            }
+
+            const specificScores = allScores.filter(s => s.gameType === gameConfig.gameType && s.level === gameConfig.level);
+
+            const maxScore = specificScores.reduce((max, score) => Math.max(max, score.score), 0);
+
+            gameState.highScore = maxScore;
+            document.getElementById('high-score-display').textContent = maxScore;
+            document.getElementById('high-score-mode').textContent = gameConfig.gameType.toUpperCase();
+            document.getElementById('high-score-level').textContent = gameConfig.level.toUpperCase();
+        };
+
+        const saveHighScore = (newScore, isNewRecord) => {
+            if (!auth || isCurrentlyTraining) return; // DON'T SAVE TRAINING SCORES
+
+            const newRecord = {
+                score: newScore,
+                gameType: gameConfig.gameType,
+                level: gameConfig.level,
+                date: new Date().toISOString(),
+                displayDate: new Date().toLocaleDateString(),
+                displayTime: new Date().toLocaleTimeString(),
+                isNewRecord: isNewRecord,
+            };
+
+            if (auth.isGuest) {
+                const key = getGuestHighScoreKey();
+                const guestScores = localStorage.getItem(key);
+                let allScores = guestScores ? JSON.parse(guestScores) : [];
+                allScores.push(newRecord);
+                localStorage.setItem(key, JSON.stringify(allScores));
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                if (user) {
+                    user.highScores.push(newRecord);
+                    saveMockUsers();
+                }
+            }
+
+            gameState.highScore = Math.max(gameState.highScore, newScore);
+            document.getElementById('high-score-display').textContent = gameState.highScore;
+        };
+        
+        // NEW: Save game history
+        const saveGameHistory = (finalScore) => {
+            if (!auth) return;
+
+            const gameRecord = {
+                gameType: gameConfig.gameType,
+                level: gameConfig.level,
+                score: finalScore,
+                date: new Date().toISOString(),
+                displayDate: new Date().toLocaleDateString(),
+            };
+
+            if (auth.isGuest) {
+                const key = getGuestHistoryKey();
+                const guestHistory = localStorage.getItem(key);
+                let allHistory = guestHistory ? JSON.parse(guestHistory) : [];
+                allHistory.unshift(gameRecord); // Add to beginning of array
+                allHistory = allHistory.slice(0, 10); // Keep only the last 10
+                localStorage.setItem(key, JSON.stringify(allHistory));
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                if (user) {
+                    if (!user.gameHistory) user.gameHistory = [];
+                    user.gameHistory.unshift(gameRecord);
+                    user.gameHistory = user.gameHistory.slice(0, 10);
+                    saveMockUsers();
+                }
+            }
+        };
+
+
+        const displayHighScoresScreen = () => {
+            if (!auth) {
+                showScreen('auth-login-screen');
+                return;
+            }
+
+            hideLogoutMenu(); // Hide menu immediately
+            isCurrentlyTraining = false; // Ensure normal mode when viewing scores
+
+            let allScores = [];
+            if (auth.isGuest) {
+                const guestScores = localStorage.getItem(getGuestHighScoreKey());
+                allScores = guestScores ? JSON.parse(guestScores) : [];
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                allScores = user ? user.highScores : [];
+            }
+
+            // Sort scores: largest to smallest score, then newest to oldest date
+            allScores.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            const list = document.getElementById('high-scores-list');
+            list.innerHTML = '';
+
+            if (allScores.length === 0) {
+                document.getElementById('no-scores-msg').classList.remove('hidden');
+            } else {
+                document.getElementById('no-scores-msg').classList.add('hidden');
+                // Slice to get only the top 10 as requested
+                allScores.slice(0, 10).forEach(score => { 
+                    const listItem = document.createElement('li');
+                    listItem.className = 'high-score-item';
+                    listItem.innerHTML = `
+                        <div>
+                            ${score.gameType.toUpperCase()} - ${score.level.toUpperCase()}
+                        </div>
+                        <div class="score-details">
+                            <span style="color: #10b981; font-size: 1.25rem;">${formatNumberWithCommas(score.score)}</span>
+                            <span>${score.displayDate} ${score.displayTime}</span>
+                        </div>
+                    `;
+                    list.appendChild(listItem);
+                });
+            }
+
+            showScreen('high-scores-screen');
+        };
+
+        // NEW: Function to show Profile Screen
+        const displayProfileScreen = () => {
+            if (!auth) {
+                showScreen('auth-login-screen');
+                return;
+            }
+            hideLogoutMenu();
+            isCurrentlyTraining = false;
+
+            const detailsContainer = document.getElementById('profile-details-container');
+            const historyList = document.getElementById('profile-history-list');
+            const noHistoryMsg = document.getElementById('no-history-msg');
+
+            detailsContainer.innerHTML = '';
+            historyList.innerHTML = '';
+
+            if (auth.isGuest) {
+                detailsContainer.innerHTML = `
+                    <div class="profile-detail-item"><span>Guest ID:</span> ${auth.username}</div>
+                `;
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                if (user) {
+                    detailsContainer.innerHTML = `
+                        <div class="profile-detail-item"><span>Name:</span> ${user.firstName} ${user.lastName}</div>
+                        <div class="profile-detail-item"><span>Username:</span> ${user.username}</div>
+                        <div class="profile-detail-item"><span>Email:</span> ${user.email}</div>
+                        <div class="profile-detail-item"><span>Birthday:</span> ${user.dob || 'Not Provided'}</div>
+                    `;
+                }
+            }
+
+            // Fetch and display history
+            let gameHistory = [];
+            if (auth.isGuest) {
+                const storedHistory = localStorage.getItem(getGuestHistoryKey());
+                gameHistory = storedHistory ? JSON.parse(storedHistory) : [];
+            } else {
+                const user = MOCK_DB_USERS[auth.id];
+                gameHistory = user && user.gameHistory ? user.gameHistory : [];
+            }
+
+            if (gameHistory.length === 0) {
+                noHistoryMsg.classList.remove('hidden');
+                historyList.classList.add('hidden');
+            } else {
+                noHistoryMsg.classList.add('hidden');
+                historyList.classList.remove('hidden');
+                gameHistory.forEach(game => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'profile-history-item';
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>${game.gameType.toUpperCase()}</strong> - ${game.level.toUpperCase()}
+                            <span style="display: block; font-size: 0.8rem; color: var(--text-secondary);">${game.displayDate}</span>
+                        </div>
+                        <div>
+                            <strong style="color: var(--accent-color);">Score: ${game.score}</strong>
+                        </div>
+                    `;
+                    historyList.appendChild(listItem);
+                });
+            }
+
+            showScreen('profile-screen');
+        };
+
+
+        // --- UTILITY FUNCTIONS ---
+        const formatNumberWithCommas = (number) => number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+        const getRandomNumber = (digits) => {
+            if (digits === 1) return Math.floor(Math.random() * 9) + 1;
+            const min = Math.pow(10, digits - 1);
+            const max = Math.pow(10, digits) - 1;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        };
+
+        const calculateResult = (n1, n2, operator) => {
+            switch (operator) {
+                case '+': return n1 + n2; case '-': return n1 - n2; case '*': return n1 * n2; case '/': return n1 / n2;
+                default: return 0;
+            }
+        };
+        
+        // --- BUTTON COLOR LOGIC (MODIFIED) ---
+        // Added two new mixed-color gradients
+        const buttonGradients = [
+            ['#3b82f6', '#2563eb'], // Blue
+            ['#10b981', '#059669'], // Green
+            ['#ef4444', '#dc2626'], // Red
+            ['#f59e0b', '#d97706'], // Yellow
+            ['#8b5cf6', '#7c3aed'], // Purple
+            ['#14b8a6', '#06b6d4'], // NEW: Teal to Cyan
+            ['#ec4899', '#f97316']  // NEW: Pink to Orange
+        ];
+
+        // Modified function to shuffle colors and avoid repetition
+        function setButtonColors(buttons) {
+            // Shuffle the array of gradients to ensure variety and no immediate repeats
+            const shuffledGradients = [...buttonGradients].sort(() => Math.random() - 0.5);
+            let colorIndex = 0;
+
+            buttons.forEach(button => {
+                // Cycle through the shuffled colors
+                const colors = shuffledGradients[colorIndex % shuffledGradients.length];
+                button.style.background = `linear-gradient(145deg, ${colors[0]}, ${colors[1]})`;
+                button.style.color = 'white'; // Ensure text remains white for gradients
+                colorIndex++;
+            });
+        }
+        // --- END BUTTON COLOR LOGIC ---
+
+
+        const themes = [
+            { name: "default", light: { "--bg-body": "#f3f4f6", "--bg-container": "#ffffff", "--text-primary": "#1f2937", "--text-secondary": "#4b5563", "--btn-start-color": "#a3e635", "--btn-end-color": "#84cc16", "--btn-text": "#1f2937", "--hover-bg": "#65a30d", "--puzzle-bg": "#f3f4f6", "--accent-color": "#3b82f6", "--secondary-accent": "#f59e0b", "--border-color": "#d1d5db" }, dark: { "--bg-body": "#111827", "--bg-container": "#2d3748", "--text-primary": "#f3f4f6", "--text-secondary": "#d1d5db", "--btn-start-color": "#4a5568", "--btn-end-color": "#2d3748", "--btn-text": "#f3f4f6", "--hover-bg": "#1a202c", "--puzzle-bg": "#1f2937", "--accent-color": "#63b3ed", "--secondary-accent": "#f6ad55", "--border-color": "#4b5563" } },
+            { name: "extreme", light: { "--bg-body": "#f3f4f6", "--bg-container": "#ffffff", "--text-primary": "#1f2937", "--text-secondary": "#4b5563", "--btn-start-color": "#1f2937", "--btn-end-color": "#4b5563", "--btn-text": "#ffffff", "--hover-bg": "#1f2937", "--puzzle-bg": "#f3f4f6", "--accent-color": "#dc2626", "--secondary-accent": "#f59e0b", "--border-color": "#d1d5db" }, dark: { "--bg-body": "#111827", "--bg-container": "#2d3748", "--text-primary": "#f3f4f6", "--text-secondary": "#d1d5db", "--btn-start-color": "#fcd34d", "--btn-end-color": "#ef4444", "--btn-text": "#1f2937", "--hover-bg": "#4b5563", "--puzzle-bg": "#1f2937", "--accent-color": "#f97316", "--secondary-accent": "#f59e0b", "--border-color": "#4b5563" } }
+        ];
+
+        function applyTheme(isDarkMode) {
+            // Apply Extreme theme colors if it's the extreme level, regardless of training mode
+            const theme = themes.find(t => t.name === (gameConfig.level === 'extreme' ? 'extreme' : 'default'));
+            const colors = isDarkMode ? theme.dark : theme.light;
+            for (const key in colors) {
+                document.documentElement.style.setProperty(key, colors[key]);
+            }
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            localStorage.setItem('darkMode', isDarkMode);
+
+            // Update theme icon based on current *mode*
+            const themeIcon = document.getElementById('theme-icon');
+            if (themeIcon) {
+                // If currently in Dark Mode (isDarkMode is true), show the Light.png icon to switch back
+                // If currently in Light Mode (isDarkMode is false), show the Dark.png icon to switch
+                themeIcon.src = isDarkMode ? 'Light.png' : 'Dark.png';
+                themeIcon.onerror = function() {
+                    this.src = isDarkMode ? 'https://placehold.co/25x25/3b82f6/ffffff?text=L' : 'https://placehold.co/25x25/f59e0b/ffffff?text=D';
+                };
+            }
+        }
+
+        // --- GAME FLOW FUNCTIONS (Condensed, Modified startGame and endGame) ---
+
+        const startGame = () => {
+            if (!auth) {
+                showScreen('auth-login-screen');
+                return;
+            }
+            
+            // Store current config for 'Restart'
+            lastGameConfig = { ...gameConfig };
+
+            gameState.questionTime = { 'easy': 20, 'medium': 25, 'hard': 30, 'extreme': 40 }[gameConfig.level];
+            gameState.score = 0;
+            gameState.lives = 5;
+            gameState.timeLeft = gameState.questionTime;
+            gameState.askedQuestions.clear(); // MODIFIED: Clear old questions for the new game
+
+            fetchHighScore();
+            updateToggleVisibility();
+            showScreen('game-screen');
+            generateQuestion();
+        };
+
+        const generateQuestion = (attempts = 0) => {
+            if (attempts > 50) {
+                console.error("Could not generate a unique question.");
+                endGame(gameState.score);
+                return;
+            }
+
+            let num1, num2, operator;
+            const { level, gameType } = gameConfig;
+
+            operator = gameType === 'mixed' ? operators[Math.floor(Math.random() * operators.length)] : { 'addition': '+', 'subtraction': '-', 'multiplication': '*', 'division': '/' }[gameType];
+
+            if (operator === '/') {
+                let targetAnswer;
+                if (level === 'easy') {
+                    targetAnswer = Math.floor(Math.random() * 8) + 2;   // Result: 2-9
+                    num2 = Math.floor(Math.random() * 9) + 2;             // Divisor: 2-10
+                } else if (level === 'medium') {
+                    targetAnswer = Math.floor(Math.random() * 90) + 10;  // Result: 10-99
+                    num2 = Math.floor(Math.random() * 18) + 2;            // Divisor: 2-19
+                } else if (level === 'hard') {
+                    targetAnswer = Math.floor(Math.random() * 900) + 100; // Result: 100-999
+                    num2 = Math.floor(Math.random() * 48) + 2;            // Divisor: 2-49
+                } else { // extreme
+                    targetAnswer = Math.floor(Math.random() * 9000) + 1000; // Result: 1000-9999
+                    num2 = Math.floor(Math.random() * 98) + 2;              // Divisor: 2-99
+                }
+                num1 = targetAnswer * num2;
+                
+                if (num1 > 9999999) { // Safety check to prevent UI-breaking numbers
+                     return generateQuestion(attempts + 1);
+                }
+            } else {
+                const setNumbers = (d1, d2) => ({ n1: getRandomNumber(d1), n2: getRandomNumber(d2) });
+                let { n1, n2 } = setNumbers(1, 1);
+
+                if (level === 'medium') ({ n1, n2 } = setNumbers(2, 2));
+                else if (level === 'hard') ({ n1, n2 } = setNumbers(3, 2));
+                else if (level === 'extreme') {
+                    if (operator === '+') ({ n1, n2 } = setNumbers(4, 4));
+                    else ({ n1, n2 } = setNumbers(Math.floor(Math.random() * 3) + 4, Math.floor(Math.random() * 2) + 2));
+                }
+                num1 = n1;
+                num2 = n2;
+
+                if (operator === '-' && num1 < num2) [num1, num2] = [num2, num1];
+            }
+            
+            const questionString = `${formatNumberWithCommas(num1)} ${operator} ${formatNumberWithCommas(num2)}`;
+            
+            if (gameState.askedQuestions.has(questionString)) {
+                return generateQuestion(attempts + 1);
+            }
+
+            gameState.question = questionString;
+            gameState.askedQuestions.add(questionString);
+            gameState.correctAnswer = calculateResult(num1, num2, operator);
+
+            generateOptions(gameState.correctAnswer);
+
+            if (gameConfig.isTimerOn) startTimer();
+            updateDisplay();
+
+            const qBox = document.getElementById('question-box');
+            qBox.classList.remove('animate-new');
+            void qBox.offsetWidth;
+            qBox.classList.add('animate-new');
+        };
+
+
+        function generateOptions(correctAnswer) {
+            const options = new Set([correctAnswer]);
+
+            let sameDigits = 0;
+            if (gameConfig.level === 'hard') {
+                sameDigits = 1;
+            } else if (gameConfig.level === 'extreme') {
+                sameDigits = Math.min(2, Math.max(1, correctAnswer.toString().replace('-', '').length - 1));
+            }
+
+            let powerOfTen = Math.pow(10, sameDigits);
+            let attempts = 0;
+
+            while (options.size < 4 && attempts < 50) {
+                let fakeAnswer;
+                if (gameConfig.level === 'easy' || gameConfig.level === 'medium') {
+                    const offsets = [-1, 1, -2, 2, -5, 5];
+                    let offset = offsets[Math.floor(Math.random() * offsets.length)] * (gameConfig.level === 'medium' ? 10 : 1);
+                    fakeAnswer = correctAnswer + offset;
+                } else {
+                    const multipliers = [-1, 1, -2, 2];
+                    let multiplier = multipliers[Math.floor(Math.random() * multipliers.length)];
+                    let offset = multiplier * powerOfTen;
+                    fakeAnswer = correctAnswer + offset;
+                }
+
+                if (!options.has(fakeAnswer) && (fakeAnswer >= 0 || gameConfig.gameType === 'subtraction')) {
+                    options.add(fakeAnswer);
+                }
+                attempts++;
+            }
+
+            while (options.size < 4) {
+                let randomOffset = (Math.floor(Math.random() * 10) + 5) * powerOfTen;
+                let fakeAnswer = correctAnswer + (Math.random() > 0.5 ? randomOffset : -randomOffset);
+                if (!options.has(fakeAnswer) && (fakeAnswer >= 0 || gameConfig.gameType === 'subtraction')) {
+                    options.add(fakeAnswer);
+                }
+            }
+
+            gameState.options = Array.from(options).sort(() => Math.random() - 0.5);
+
+            document.getElementById('math-puzzle').textContent = gameState.question;
+            document.querySelectorAll('#options-container button').forEach((button, index) => {
+                const option = gameState.options[index];
+                button.textContent = formatNumberWithCommas(option);
+                button.onclick = (e) => checkAnswer(option, e.currentTarget);
+                button.disabled = false;
+                button.classList.remove('correct-answer', 'incorrect-answer');
+            });
+        }
+
+
+        const checkAnswer = (selectedAnswer, selectedButton) => {
+            if (timerId) clearInterval(timerId);
+            document.querySelectorAll('#options-container button').forEach(btn => btn.disabled = true);
+
+            const isCorrect = selectedAnswer === gameState.correctAnswer;
+            let newScore = isCorrect ? gameState.score + 1 : gameState.score;
+            // Only deduct lives if the toggle is ON in the config
+            let newLives = isCorrect ? gameState.lives : (gameConfig.isLivesOn ? gameState.lives - 1 : gameState.lives);
+
+            selectedButton.classList.add(isCorrect ? 'correct-answer' : 'incorrect-answer');
+
+            if (!isCorrect) {
+                const correctButton = Array.from(document.querySelectorAll('.answer-btn')).find(btn => parseFloat(btn.textContent.replace(/,/g, '')) === gameState.correctAnswer);
+                if(correctButton) correctButton.classList.add('correct-answer');
+            }
+            if (isCorrect) showConfetti();
+
+            setTimeout(() => {
+                // Game only ends if lives are ON and have run out.
+                const shouldEndGame = gameConfig.isLivesOn && newLives <= 0;
+
+                if (shouldEndGame) {
+                    endGame(newScore); // Pass the new score to endGame
+                } else {
+                    gameState.score = newScore;
+                    gameState.lives = newLives;
+                    generateQuestion();
+                }
+            }, 1000);
+        };
+
+        const startTimer = () => {
+            gameState.timeLeft = gameState.questionTime;
+            if (timerId) clearInterval(timerId);
+            timerId = setInterval(() => {
+                gameState.timeLeft--;
+                updateDisplay();
+                if (gameState.timeLeft < 0) {
+                    clearInterval(timerId);
+                    handleTimeout();
+                }
+            }, 1000);
+        };
+
+        const handleTimeout = () => {
+            // Only deduct lives if the toggle is ON in the config
+            if (gameConfig.isLivesOn) {
+                gameState.lives--;
+                if (gameState.lives <= 0) {
+                    endGame(gameState.score);
+                } else {
+                    updateDisplay();
+                    generateQuestion();
+                }
+            } else {
+                // If lives are off, just move to the next question.
+                generateQuestion();
+            }
+        };
+
+        const endGame = (finalScore) => {
+            if (timerId) clearInterval(timerId);
+            let isNewRecord = finalScore > gameState.highScore;
+
+            saveHighScore(finalScore, isNewRecord);
+            saveGameHistory(finalScore); // Save game to history
+            
+            // Update score display on the end screen
+            document.getElementById('end-final-score').innerHTML = `Your Final Score: <span style="color: var(--accent-color);">${finalScore}</span>`;
+            
+            // Show high score only if not in training mode
+            if (!isCurrentlyTraining) {
+                 document.getElementById('end-high-score').innerHTML = `High Score: <span style="color: #10b981;">${gameState.highScore}</span>`;
+            } else {
+                 document.getElementById('end-high-score').innerHTML = `(Training Mode - Score not recorded)`;
+            }
+
+            document.getElementById('new-record-msg').classList.toggle('hidden', !isNewRecord || isCurrentlyTraining);
+
+            showScreen('end-screen');
+        };
+
+        // Restart function to use the previous settings
+        const restartGame = () => {
+             // Re-apply last game config to current config
+            gameConfig = { ...lastGameConfig };
+            // isCurrentlyTraining is preserved from the last session
+            const isDark = document.body.classList.contains('dark-mode');
+            applyTheme(isDark);
+            startGame();
+        };
+
+
+        // --- RENDER & DISPLAY FUNCTIONS ---
+
+        function updateDisplay(timerOnly = false) {
+            if (!timerOnly) {
+                document.getElementById('score').textContent = gameState.score;
+                document.getElementById('high-score-display').textContent = gameState.highScore;
+                document.getElementById('level-display').textContent = gameConfig.level.toUpperCase() + (isCurrentlyTraining ? ' (TRAINING)' : '');
+                document.getElementById('high-score-mode').textContent = gameConfig.gameType.toUpperCase();
+                document.getElementById('high-score-level').textContent = gameConfig.level.toUpperCase();
+            }
+            // Show lives display only if the lives toggle is ON
+            document.getElementById('lives-display-container').style.display = gameConfig.isLivesOn ? 'inline-block' : 'none';
+            if (gameConfig.isLivesOn) {
+                document.getElementById('lives').textContent = gameState.lives;
+                document.getElementById('lives').style.color = gameState.lives <= 2 ? '#ef4444' : 'var(--accent-color)';
+            }
+            // Show time display only if the timer toggle is ON
+            document.getElementById('time-display-container').style.display = gameConfig.isTimerOn ? 'inline-block' : 'none';
+            if (gameConfig.isTimerOn) {
+                document.getElementById('time').textContent = gameState.timeLeft >= 0 ? `${gameState.timeLeft}s` : '0s';
+                document.getElementById('time').style.color = gameState.timeLeft <= 5 ? '#ef4444' : 'var(--accent-color)';
+            }
+        }
+
+        // Helper function to update visibility on the game screen
+        function updateToggleVisibility() {
+            // Already handled in updateDisplay, but good to have a dedicated function for clarity
+            updateDisplay();
+        }
+
+        const screenElements = {
+            'auth-login-screen': document.getElementById('auth-login-screen'),
+            'start-screen': document.getElementById('start-screen'),
+            'level-select-screen': document.getElementById('level-select-screen'),
+            'game-screen': document.getElementById('game-screen'),
+            'end-screen': document.getElementById('end-screen'),
+            'high-scores-screen': document.getElementById('high-scores-screen'),
+            'profile-screen': document.getElementById('profile-screen'), // NEW
+            'info-screen': document.getElementById('info-screen'), // NEW
+        };
+
+        function showScreen(screenId) {
+            Object.values(screenElements).forEach(screen => {
+                if(screen) screen.classList.add('hidden');
+            });
+
+            const targetScreen = screenElements[screenId];
+            if (targetScreen) {
+                targetScreen.classList.remove('hidden');
+            } else {
+                console.error("Invalid screen ID provided:", screenId);
+                return;
+            }
+
+            const highScoreContainer = document.getElementById('high-score-display-container');
+            const shouldShowHighScore = screenId === 'game-screen' || screenId === 'start-screen' || screenId === 'level-select-screen';
+            // Only show high score if NOT in training mode
+            highScoreContainer.classList.toggle('hidden', !shouldShowHighScore || isCurrentlyTraining); 
+
+            // NEW: Show/Hide the training mode switch button
+            const trainingSwitchContainer = document.getElementById('training-mode-switch-container');
+            if (trainingSwitchContainer) {
+                trainingSwitchContainer.classList.toggle('hidden', !(screenId === 'start-screen' && isCurrentlyTraining));
+            }
+
+
+            if (auth && shouldShowHighScore) fetchHighScore();
+
+            if (screenId === 'start-screen' || screenId === 'level-select-screen') {
+                setButtonColors(document.querySelectorAll('.game-type-btn, .level-btn'));
+                const isDark = document.body.classList.contains('dark-mode');
+                applyTheme(isDark);
+                
+                // NEW: Show/Hide toggles based on training mode status
+                const toggleContainer = document.getElementById('level-toggles-container');
+                if (toggleContainer) {
+                    // Toggles are only visible in training mode
+                    toggleContainer.classList.toggle('hidden', !isCurrentlyTraining);
+                }
+
+            } else if (screenId === 'auth-login-screen') {
+                document.getElementById('header-container').classList.add('hidden');
+            }
+        }
+
+        function showConfetti() {
+            const colors = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6'];
+            const confettiContainer = document.getElementById('confetti-container');
+
+            confettiContainer.innerHTML = '';
+
+            for (let i = 0; i < 50; i++) {
+                const confettiPiece = document.createElement('div');
+                confettiPiece.className = 'confetti-piece';
+                confettiPiece.style.left = `${Math.random() * 100}vw`;
+                confettiPiece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confettiPiece.style.animationDuration = `${Math.random() * 2 + 1}s`;
+                confettiPiece.style.animationDelay = `-${Math.random()}s`;
+                confettiContainer.appendChild(confettiPiece);
+                setTimeout(() => confettiPiece.remove(), 3000);
+            }
+        }
+
+        // --- PASSWORD TOGGLE HANDLER ---
+        function setupPasswordToggles() {
+            document.querySelectorAll('.password-toggle').forEach(toggle => {
+                toggle.addEventListener('click', (e) => {
+                    // Check for the closest ancestor that is the .password-input-group
+                    const parentGroup = e.target.closest('.password-input-group');
+                    if (!parentGroup) return;
+
+                    const passwordInput = parentGroup.querySelector('input[type="password"], input[type="text"]');
+                    const icon = parentGroup.querySelector('.password-toggle i');
+
+                    if (passwordInput && icon) {
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            icon.classList.replace('fa-eye', 'fa-eye-slash');
+                        } else {
+                            passwordInput.type = 'password';
+                            icon.classList.replace('fa-eye-slash', 'fa-eye');
+                        }
+                    }
+                });
+            });
+        }
+
+
+        // --- INITIALIZATION AND EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Theme Initialization
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Default to Light theme (false) unless localStorage explicitly says true, or system prefers dark
+            const initialDark = localStorage.getItem('darkMode') === 'true' || (localStorage.getItem('darkMode') === null && prefersDark);
+            applyTheme(initialDark);
+
+            // Theme Toggle Handler
+            document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+                const isDark = document.body.classList.contains('dark-mode');
+                applyTheme(!isDark); // Toggle theme
+            });
+            
+            // NEW: Home Link Handler
+            document.getElementById('home-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                isCurrentlyTraining = false; // Ensure training mode is off when navigating home
+                showScreen('start-screen');
+            });
+
+
+            // Auth Event Listeners
+            setupPasswordToggles();
+
+            const logoutMenu = document.getElementById('logout-menu');
+            const infoMenu = document.getElementById('info-menu');
+            const currentTimeDisplay = document.getElementById('current-time-display');
+
+            // Handle dropdown button click to show menu AND update time
+            document.getElementById('auth-display-btn').onclick = () => {
+                hideInfoMenu(); // Close other menu if open
+                if (auth) {
+                    const now = new Date();
+                    currentTimeDisplay.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                } else {
+                    currentTimeDisplay.textContent = '';
+                }
+                logoutMenu.classList.toggle('hidden');
+            };
+
+            // NEW: Handle info menu button click
+            document.getElementById('info-menu-btn').onclick = () => {
+                hideLogoutMenu(); // Close other menu if open
+                infoMenu.classList.toggle('hidden');
+            };
+
+
+            // NEW: Close button for logout menu
+            document.getElementById('close-logout-menu-btn').addEventListener('click', hideLogoutMenu);
+            document.getElementById('close-info-menu-btn').addEventListener('click', hideInfoMenu);
+
+
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            document.getElementById('high-scores-btn').addEventListener('click', displayHighScoresScreen);
+            document.getElementById('guest-login-btn').addEventListener('click', loginAsGuest);
+            
+            // PROFILE BUTTON: Hide menu, show profile screen, ensure normal mode
+            document.getElementById('profile-btn').addEventListener('click', () => {
+                hideLogoutMenu();
+                displayProfileScreen();
+            }); 
+
+            // BACK FROM PROFILE: Ensure normal mode
+            document.getElementById('back-from-profile').addEventListener('click', () => {
+                isCurrentlyTraining = false;
+                showScreen('start-screen')
+            }); 
+
+            // NEW INFO MENU BUTTONS
+            document.getElementById('home-menu-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                hideInfoMenu();
+                isCurrentlyTraining = false; 
+                showScreen('start-screen');
+            });
+
+            document.getElementById('how-to-play-btn').addEventListener('click', () => {
+                hideInfoMenu();
+                alert(
+                    "How to Play Math Puzzle\n\n" +
+                    "1. Choose a Game Type: Select Addition, Subtraction, Multiplication, Division, or Mixed.\n\n" +
+                    "2. Select Difficulty: Pick from Easy, Medium, Hard, or Extreme. Difficulty affects the size of the numbers and the time limit.\n\n" +
+                    "3. Solve the Puzzle: A math question will appear. Click on the button with the correct answer from the four options provided.\n\n" +
+                    "4. Score Points: You get 1 point for each correct answer.\n\n" +
+                    "5. Watch the Timer & Lives: In normal mode, you have a time limit per question and 5 lives. Answering incorrectly or running out of time costs a life.\n\n" +
+                    "6. Training Mode: You can play in Training Mode to practice without the pressure of scores, timers, or lives. You can toggle the timer and lives on/off in this mode."
+                );
+            });
+
+            const infoTitle = document.getElementById('info-screen-title');
+            const infoContent = document.getElementById('info-screen-content');
+
+            document.getElementById('about-us-btn').addEventListener('click', () => {
+                hideInfoMenu();
+                infoTitle.textContent = 'About Us';
+                infoContent.innerHTML = `
+                    <p>This project is a final year project created by Dinesh V, Sanjaykumar K, and Vasanth M.</p>
+                    <p>We are students of B.Sc Computer Science at Dr. M.G.R. Chockalingam Arts College, Arni, Tiruvannamalai, Tamil Nadu.</p>
+                `;
+                showScreen('info-screen');
+            });
+
+            document.getElementById('contact-btn').addEventListener('click', () => {
+                hideInfoMenu();
+                infoTitle.textContent = 'Contact Us';
+                infoContent.innerHTML = `
+                    <p>For any questions or feedback, please reach out to the team:</p>
+                    <h4>Dinesh V</h4>
+                    <p><a href="mailto:dinesh20323u18012@gmail.com">dinesh20323u18012@gmail.com</a></p>
+                    
+                    <h4>Vasanth M</h4>
+                    <p><a href="mailto:vasanth20323u18077@gmail.com">vasanth20323u18077@gmail.com</a></p>
+
+                    <h4>Sanjay Kumar K</h4>
+                    <p><a href="mailto:sanjaykumar20323u18055@gmail.com">sanjaykumar20323u18055@gmail.com</a></p>
+                `;
+                showScreen('info-screen');
+            });
+
+            document.getElementById('back-from-info').addEventListener('click', () => showScreen('start-screen'));
+
+
+            // NEW: Main Puzzle Button Handler
+            document.getElementById('main-puzzle-btn').addEventListener('click', () => {
+                hideLogoutMenu();
+                isCurrentlyTraining = false; // Set to main mode
+                showScreen('start-screen');
+            });
+
+            // NEW: Training Mode Button Handler: Hide menu, set training flag, show start screen
+            document.getElementById('training-mode-btn').addEventListener('click', () => {
+                hideLogoutMenu();
+                isCurrentlyTraining = true;
+                showScreen('start-screen'); 
+            });
+
+            // NEW: Switch to Main Puzzle Button Handler
+            document.getElementById('switch-to-main-puzzle-btn').addEventListener('click', () => {
+                isCurrentlyTraining = false;
+                showScreen('start-screen'); // Re-show the screen to update its state
+            });
+
+
+            document.getElementById('view-terms').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert("MATH PUZZLE PRO: TERMS AND CONDITIONS\n\n1. Acceptance of Terms: By checking the box, you agree to these mock terms. Do not use real credentials or personal information.\n2. Service Provided: This is a math puzzle game for entertainment and skill practice only.\n3. Data Usage: User data (including mock accounts and high scores) is stored in your browser's local storage only. We are not responsible for its loss.\n4. Account Security: You are responsible for maintaining the confidentiality of your password.\n5. Termination: We reserve the right to mock-terminate your mock-account at any time for any mock-reason.");
+            });
+
+
+            const loginToggle = document.getElementById('login-toggle');
+            const registerToggle = document.getElementById('register-toggle');
+            const registerFields = document.getElementById('register-fields');
+            const confirmPasswordRow = document.getElementById('confirm-password-row');
+            const termsGroup = document.getElementById('terms-group');
+            const authSubmitBtn = document.getElementById('auth-submit-btn');
+            const authForm = document.getElementById('auth-form');
+            const authMessage = document.getElementById('auth-message');
+
+            const sharedUsernameInput = document.getElementById('username');
+            const sharedPasswordInput = document.getElementById('password');
+
+            const switchAuthMode = (mode) => {
+                currentAuthScreen = mode;
+                loginToggle.classList.toggle('active-blue', mode === 'login');
+                registerToggle.classList.toggle('active-green', mode === 'register');
+                
+                // Toggle other button active state for visual effect
+                loginToggle.classList.toggle('active-green', mode === 'register');
+                registerToggle.classList.toggle('active-blue', mode === 'login');
+
+                registerFields.classList.toggle('hidden', mode === 'login');
+                confirmPasswordRow.classList.toggle('hidden', mode === 'login');
+                termsGroup.classList.toggle('hidden', mode === 'login');
+
+                authSubmitBtn.textContent = mode === 'login' ? 'Login' : 'Register';
+                authSubmitBtn.className = `btn ${mode === 'login' ? 'btn-blue' : 'btn-green'}`;
+                authMessage.textContent = '';
+
+                const isRegister = mode === 'register';
+                // Toggle required status based on mode
+                if (authForm.firstName) authForm.firstName.required = isRegister;
+                if (authForm.lastName) authForm.lastName.required = isRegister;
+                if (authForm.regEmail) authForm.regEmail.required = isRegister;
+                if (authForm.dob) authForm.dob.required = isRegister;
+                if (authForm.confirmPassword) authForm.confirmPassword.required = isRegister;
+                document.getElementById('terms-checkbox').required = isRegister;
+
+                sharedUsernameInput.required = true;
+                sharedPasswordInput.required = true;
+
+                authForm.reset();
+            };
+
+            loginToggle.addEventListener('click', () => switchAuthMode('login'));
+            registerToggle.addEventListener('click', () => switchAuthMode('register'));
+
+            authForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const username = form.username.value;
+                const password = form.password.value;
+                let result;
+
+                if (currentAuthScreen === 'login') {
+                    result = loginUser(username, password);
+                } else {
+                    const details = {
+                        firstName: form.firstName.value,
+                        lastName: form.lastName.value,
+                        username: username,
+                        dob: form.dob.value,
+                        email: form.regEmail.value,
+                        password: password,
+                        confirmPassword: form.confirmPassword.value,
+                        terms: form['terms-checkbox'].checked
+                    };
+                    result = registerUser(details);
+                }
+
+                authMessage.textContent = result.message;
+                authMessage.style.color = result.success ? '#10b981' : '#ef4444';
+
+                if (result.success) {
+                    setTimeout(() => {
+                        showScreen('start-screen');
+                        // MODIFIED: Clear the form after successful registration and screen transition
+                        authForm.reset();
+                    }, 500);
+                }
+            });
+
+            // Game Event Listeners
+            document.querySelectorAll('.game-type-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    gameConfig.gameType = button.dataset.type;
+                    
+                    // Reset toggles to ON by default if NOT in training mode
+                    if (!isCurrentlyTraining) {
+                        document.getElementById('timer-toggle-checkbox').checked = true;
+                        document.getElementById('lives-toggle-checkbox').checked = true;
+                    }
+                    
+                    showScreen('level-select-screen');
+                });
+            });
+
+            document.querySelectorAll('.level-btn').forEach(button => {
+                button.addEventListener('click', () => {
+                    gameConfig.level = button.dataset.level;
+                    
+                    if (isCurrentlyTraining) {
+                        // Training mode config is taken from visible toggles
+                        gameConfig.isTimerOn = document.getElementById('timer-toggle-checkbox').checked;
+                        gameConfig.isLivesOn = document.getElementById('lives-toggle-checkbox').checked;
+                    } else {
+                        // Normal mode: Lives and Timer are always on (but toggles are hidden and set to true)
+                        gameConfig.isTimerOn = true;
+                        gameConfig.isLivesOn = true;
+                    }
+
+                    const isDark = document.body.classList.contains('dark-mode');
+                    applyTheme(isDark);
+                    startGame();
+                });
+            });
+
+            document.getElementById('back-to-start').addEventListener('click', () => {
+                 // **FIXED**: Do not reset training mode when going back.
+                 // The isCurrentlyTraining state is preserved.
+                 showScreen('start-screen');
+            });
+            
+            // Restart button now calls restartGame function
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+
+            // Back to Home button now calls showScreen('start-screen')
+            // The training state is preserved because it's no longer reset in endGame()
+            document.getElementById('back-to-home-btn').addEventListener('click', () => {
+                showScreen('start-screen');
+            });
+
+            document.getElementById('exit-btn').addEventListener('click', () => {
+                if(timerId) clearInterval(timerId);
+                // **FIXED**: Do not reset training mode when exiting.
+                // The isCurrentlyTraining state is preserved.
+                showScreen('start-screen');
+            });
+            document.getElementById('back-from-high-scores').addEventListener('click', () => showScreen('start-screen'));
+
+
+            loadAuth();
+        });
+    </script>
+</body>
+</html>
